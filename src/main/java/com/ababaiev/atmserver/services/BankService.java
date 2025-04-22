@@ -13,8 +13,8 @@ import com.ababaiev.atmserver.utils.WithdrawStatus;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 @Service
 public class BankService {
@@ -119,14 +119,30 @@ public class BankService {
     private String generateCvv(String accountNumber, String cardNumber) {
         String concat = accountNumber + cardNumber;
         byte[] hash = CryptoUtils.tripleHash(concat);
-        long number = hashToNumber(hash);
-        return String.valueOf(number);
+        return hashToNumberAlt(hash).mod(new BigInteger("1000")).toString();
+//        long number = hashToNumber(hash);
+//        return String.valueOf(number);
     }
 
     private String generatePvv(String pin) {
         byte[] hash = CryptoUtils.tripleHash(pin);
-        long number = hashToNumber(hash);
-        return String.valueOf(number);
+        return hashToNumberAlt(hash).mod(new BigInteger("10000")).toString();
+//        long number = hashToNumber(hash);
+//        return String.valueOf(number);
+    }
+
+    private BigInteger hashToNumberAlt(byte[] hash) {
+        String number = new BigInteger(1, hash).toString();
+        StringBuilder sb = new StringBuilder();
+        char[] charArray = number.toCharArray();
+        for (int i = 0; i < charArray.length; i++) {
+            char c = charArray[i];
+            if (i % 2 == 0) {
+                sb.append(c);
+            }
+        }
+        return new BigInteger(sb.toString());
+
     }
 
     private long hashToNumber(byte[] bytes) {

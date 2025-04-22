@@ -2,10 +2,12 @@ package com.ababaiev.atmserver.services;
 
 import com.ababaiev.atmserver.models.BankAccount;
 import com.ababaiev.atmserver.models.BankCard;
+import com.ababaiev.atmserver.models.requests.AddMoneyRequest;
 import com.ababaiev.atmserver.models.requests.WithdrawMoneyRequest;
 import com.ababaiev.atmserver.models.responses.CreateCardResponse;
 import com.ababaiev.atmserver.repositories.AccountRepo;
 import com.ababaiev.atmserver.repositories.CardRepo;
+import com.ababaiev.atmserver.utils.AddFundsStatus;
 import com.ababaiev.atmserver.utils.CryptoUtils;
 import com.ababaiev.atmserver.utils.WithdrawStatus;
 import jakarta.transaction.Transactional;
@@ -63,21 +65,13 @@ public class BankService {
             return WithdrawStatus.REJECTED;
         }
 
-        double amount = Math.ceil(request.getAmount());
+        double amount = Math.abs(request.getAmount());
 
-        BankCard card = optCard.get();
-        BankAccount bankAccount = card.getAccount();
-        String accountNumber = bankAccount.getAccountNumber();
-        String cardNumber = card.getCardNumber();
-
-        String verificationCvv = generateCvv(accountNumber, cardNumber);
-        if (!verificationCvv.equals(request.getCvv()) || !verificationCvv.equals(card.getCvv())) {
+        if (!validateCardDetails(optCard.get(), request.getCvv(), request.getPvv())){
             return WithdrawStatus.REJECTED;
         }
 
-        if (!card.getPvv().equals(request.getPvv())){
-            return WithdrawStatus.REJECTED;
-        }
+        BankAccount bankAccount = optCard.get().getAccount();
 
         if (bankAccount.getBalance() < amount) {
             return WithdrawStatus.REJECTED;
@@ -86,6 +80,40 @@ public class BankService {
         bankAccount.setBalance(bankAccount.getBalance() - amount);
         accountRepo.save(bankAccount);
         return WithdrawStatus.APPROVED;
+    }
+
+    public AddFundsStatus addMoney(AddMoneyRequest request) {
+        var optCard = this.cardRepo.findById(request.getCardNumber());
+        if (optCard.isEmpty()){
+            return AddFundsStatus.FAILED;
+        }
+
+        double amount = Math.abs(request.getAmount());
+
+        if (!validateCardDetails(optCard.get(), request.getCvv(), request.getPvv())){
+            return AddFundsStatus.FAILED;
+        }
+
+        BankAccount bankAccount = optCard.get().getAccount();
+        bankAccount.setBalance(bankAccount.getBalance() + amount);
+        accountRepo.save(bankAccount);
+        return AddFundsStatus.SUCCESS;
+    }
+
+    private boolean validateCardDetails(BankCard card, String requestCvv, String requestPvv) {
+        BankAccount bankAccount = card.getAccount();
+        String accountNumber = bankAccount.getAccountNumber();
+        String cardNumber = card.getCardNumber();
+
+        String verificationCvv = generateCvv(accountNumber, cardNumber);
+        if (!verificationCvv.equals(requestCvv) || !verificationCvv.equals(card.getCvv())) {
+            return false;
+        }
+
+        if (!card.getPvv().equals(requestPvv)){
+            return false;
+        }
+        return true;
     }
 
     private String generateCvv(String accountNumber, String cardNumber) {

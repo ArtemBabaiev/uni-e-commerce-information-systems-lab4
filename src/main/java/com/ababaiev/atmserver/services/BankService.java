@@ -36,7 +36,7 @@ public class BankService {
 
         BankAccount bankAccount = new BankAccount();
         bankAccount.setAccountNumber(accountNumber);
-        bankAccount.setBalance(0);
+        bankAccount.setBalance(100);
 
         bankAccount= accountRepo.save(bankAccount);
 

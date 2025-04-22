@@ -22,12 +22,12 @@ public class BankController {
     }
 
     @PostMapping("/withdraw-money")
-    public WithdrawStatus withdrawMoney(@RequestBody WithdrawMoneyRequest request) {
-        return this.bankService.withdrawMoney(request);
+    public String withdrawMoney(@RequestBody WithdrawMoneyRequest request) {
+        return this.bankService.withdrawMoney(request).toString();
     }
 
     @PostMapping("/add-money")
-    public AddFundsStatus addMoney(@RequestBody AddMoneyRequest request) {
-        return this.bankService.addMoney(request);
+    public String addMoney(@RequestBody AddMoneyRequest request) {
+        return this.bankService.addMoney(request).toString();
     }
 }
